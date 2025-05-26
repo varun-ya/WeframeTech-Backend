@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use(express.static(__dirname));
+
 
 const corsOptions = {
   origin: 'http://192.168.1.11:8080',
@@ -44,9 +44,6 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
 
 const start = async () => {
   try {
@@ -800,5 +797,14 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   process.exit(1);
 });
+
+// Serve static files from the same directory as server.js
+app.use(express.static(__dirname));
+
+// Fallback for the root URL to serve index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 
 start();
