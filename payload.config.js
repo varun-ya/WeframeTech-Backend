@@ -185,6 +185,15 @@ export default buildConfig({
           },
         },
         {
+          name: 'createdBy',
+          type: 'relationship',
+          relationTo: 'users',
+          admin: {
+            position: 'sidebar',
+            description: 'Form creator (automatically set)',
+          },
+        },
+        {
           name: 'tenant',
           type: 'relationship',
           relationTo: 'users',
@@ -195,13 +204,22 @@ export default buildConfig({
         },
       ],
       access: {
-        read: () => true,
+        read: ({ req }) => {
+          if (!req.user) return false; 
+          if (req.user.role === 'admin') return true; 
+        
+          return {
+            createdBy: {
+              equals: req.user.id,
+            },
+          };
+        },
         create: ({ req }) => Boolean(req.user),
         update: ({ req }) => {
           if (!req.user) return false;
           if (req.user.role === 'admin') return true;
           return {
-            tenant: {
+            createdBy: {
               equals: req.user.id,
             },
           };
@@ -210,7 +228,7 @@ export default buildConfig({
           if (!req.user) return false;
           if (req.user.role === 'admin') return true;
           return {
-            tenant: {
+            createdBy: {
               equals: req.user.id,
             },
           };
@@ -220,6 +238,7 @@ export default buildConfig({
         beforeChange: [
           ({ data, req, operation }) => {
             if (req.user && operation === 'create') {
+              data.createdBy = req.user.id;
               data.tenant = req.user.id;
             }
             return data;

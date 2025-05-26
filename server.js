@@ -373,7 +373,7 @@ const start = async () => {
       next();
     });
     
-    const collections = ['users', 'forms', 'form-submissions'];
+    const collections = ['users', 'form-submissions'];
     
     collections.forEach(collection => {
       console.log(`Setting up routes for ${collection}`);
@@ -478,6 +478,220 @@ const start = async () => {
           }
         }
       });
+    });
+
+    app.get('/api/forms', async (req, res) => {
+      try {
+        console.log('Fetching forms');
+        
+        let queryOptions = {
+          collection: 'forms',
+          req: createPayloadReq(req),
+        };
+
+        if (req.user && req.user.role !== 'admin') {
+          queryOptions.where = {
+            createdBy: {
+              equals: req.user.id
+            }
+          };
+        }
+        
+        const result = await payload.find(queryOptions);
+        res.json(result);
+      } catch (error) {
+        console.error('Error fetching forms:', error.message);
+        res.status(500).json({ error: error.message });
+      }
+    });
+    
+   app.get('/api/forms/:id', async (req, res) => {
+  try {
+    console.log(`Fetching form with ID: ${req.params.id}`);
+    
+    const form = await payload.findByID({
+      collection: 'forms',
+      id: req.params.id,
+      req: createPayloadReq(req),
+    });
+
+    if (req.user && req.user.role !== 'admin') {
+      const createdById = typeof form.createdBy === 'object' ? form.createdBy.id : form.createdBy;
+      if (createdById !== req.user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+    
+    res.json(form);
+  } catch (error) {
+    console.error('Error fetching form by ID:', error.message);
+    if (error.message.includes('not found')) {
+      res.status(404).json({ error: 'Document not found' });
+    } else {
+      res.status(403).json({ error: 'Access denied or document not found' });
+    }
+  }
+});
+
+app.put('/api/forms/:id', async (req, res) => {
+  try {
+    console.log(`Updating form with ID: ${req.params.id}`);
+    
+    const existingForm = await payload.findByID({
+      collection: 'forms',
+      id: req.params.id,
+      req: createPayloadReq(req),
+    });
+
+    if (req.user && req.user.role !== 'admin') {
+      const createdById = typeof existingForm.createdBy === 'object' ? existingForm.createdBy.id : existingForm.createdBy;
+      if (createdById !== req.user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+    
+    const result = await payload.update({
+      collection: 'forms',
+      id: req.params.id,
+      data: req.body,
+      req: createPayloadReq(req),
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating form:', error.message);
+    if (error.message.includes('not found')) {
+      res.status(404).json({ error: 'Document not found' });
+    } else if (error.message.includes('access')) {
+      res.status(403).json({ error: 'Access denied' });
+    } else {
+      res.status(400).json({ error: error.message });
+    }
+  }
+});
+
+app.delete('/api/forms/:id', async (req, res) => {
+  try {
+    console.log(`Deleting form with ID: ${req.params.id}`);
+    
+    const existingForm = await payload.findByID({
+      collection: 'forms',
+      id: req.params.id,
+      req: createPayloadReq(req),
+    });
+
+    if (req.user && req.user.role !== 'admin') {
+      const createdById = typeof existingForm.createdBy === 'object' ? existingForm.createdBy.id : existingForm.createdBy;
+      if (createdById !== req.user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+    
+    await payload.delete({
+      collection: 'forms',
+      id: req.params.id,
+      req: createPayloadReq(req),
+    });
+    res.json({ success: true, message: 'Document deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting form:', error.message);
+    if (error.message.includes('not found')) {
+      res.status(404).json({ error: 'Document not found' });
+    } else if (error.message.includes('access')) {
+      res.status(403).json({ error: 'Access denied' });
+    } else {
+      res.status(400).json({ error: error.message });
+    }
+  }
+});
+    app.post('/api/forms', async (req, res) => {
+      try {
+        console.log('Creating new form');
+        console.log('Data:', JSON.stringify(req.body, null, 2));
+        
+        const formData = {
+          ...req.body,
+          createdBy: req.user ? req.user.id : null
+        };
+        
+        const result = await payload.create({
+          collection: 'forms',
+          data: formData,
+          req: createPayloadReq(req),
+        });
+        res.status(201).json(result);
+      } catch (error) {
+        console.error('Error creating form:', error.message);
+        if (error.message.includes('access')) {
+          res.status(403).json({ error: 'Access denied' });
+        } else {
+          res.status(400).json({ error: error.message });
+        }
+      }
+    });
+    
+    app.put('/api/forms/:id', async (req, res) => {
+      try {
+        console.log(`Updating form with ID: ${req.params.id}`);
+        
+        const existingForm = await payload.findByID({
+          collection: 'forms',
+          id: req.params.id,
+          req: createPayloadReq(req),
+        });
+
+        if (req.user && req.user.role !== 'admin' && existingForm.createdBy !== req.user.id) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
+        
+        const result = await payload.update({
+          collection: 'forms',
+          id: req.params.id,
+          data: req.body,
+          req: createPayloadReq(req),
+        });
+        res.json(result);
+      } catch (error) {
+        console.error('Error updating form:', error.message);
+        if (error.message.includes('not found')) {
+          res.status(404).json({ error: 'Document not found' });
+        } else if (error.message.includes('access')) {
+          res.status(403).json({ error: 'Access denied' });
+        } else {
+          res.status(400).json({ error: error.message });
+        }
+      }
+    });
+    
+    app.delete('/api/forms/:id', async (req, res) => {
+      try {
+        console.log(`Deleting form with ID: ${req.params.id}`);
+        
+        const existingForm = await payload.findByID({
+          collection: 'forms',
+          id: req.params.id,
+          req: createPayloadReq(req),
+        });
+
+        if (req.user && req.user.role !== 'admin' && existingForm.createdBy !== req.user.id) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
+        
+        await payload.delete({
+          collection: 'forms',
+          id: req.params.id,
+          req: createPayloadReq(req),
+        });
+        res.json({ success: true, message: 'Document deleted successfully' });
+      } catch (error) {
+        console.error('Error deleting form:', error.message);
+        if (error.message.includes('not found')) {
+          res.status(404).json({ error: 'Document not found' });
+        } else if (error.message.includes('access')) {
+          res.status(403).json({ error: 'Access denied' });
+        } else {
+          res.status(400).json({ error: error.message });
+        }
+      }
     });
     
     console.log('All API routes configured successfully');
