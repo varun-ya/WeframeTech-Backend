@@ -6,14 +6,21 @@ import config from './payload.config.js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use(express.static(__dirname));
 
 const corsOptions = {
   origin: 'http://192.168.1.11:8080',
@@ -36,6 +43,10 @@ if (process.env.NODE_ENV !== 'production') {
     }
   });
 }
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const start = async () => {
   try {
