@@ -798,13 +798,19 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// Serve static files from the same directory as server.js
-app.use(express.static(__dirname));
 
-// Fallback for the root URL to serve index.html
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/test.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test.html'));
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+
 
 
 start();
